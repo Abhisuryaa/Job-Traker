@@ -1,0 +1,314 @@
+# Instructions
+
+During your interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. 
+
+You should also use the `.cursorrules` file as a Scratchpad to organize your thoughts. Especially when you receive a new task, you should first review the content of the Scratchpad, clear old different task if necessary, first explain the task, and plan the steps you need to take to complete the task. You can use todo markers to indicate the progress, e.g.
+[X] Task 1
+[ ] Task 2
+
+Also update the progress of the task in the Scratchpad when you finish a subtask.
+Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the Scratchpad to reflect and plan.
+The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
+
+# Tools
+
+Note all the tools are in python3. So in the case you need to do batch processing, you can always consult the python files and write your own script.
+
+## Screenshot Verification
+
+The screenshot verification workflow allows you to capture screenshots of web pages and verify their appearance using LLMs. The following tools are available:
+
+1. Screenshot Capture:
+```bash
+venv/bin/python3 tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] [--height HEIGHT]
+```
+
+2. LLM Verification with Images:
+```bash
+venv/bin/python3 tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png
+```
+
+Example workflow:
+```python
+from screenshot_utils import take_screenshot_sync
+from llm_api import query_llm
+
+# Take a screenshot
+
+screenshot_path = take_screenshot_sync('https://example.com', 'screenshot.png')
+
+# Verify with LLM
+
+response = query_llm(
+    "What is the background color and title of this webpage?",
+    provider="openai",  # or "anthropic"
+    image_path=screenshot_path
+)
+print(response)
+```
+
+## LLM
+
+You always have an LLM at your side to help you with the task. For simple tasks, you could invoke the LLM by running the following command:
+```
+venv/bin/python3 ./tools/llm_api.py --prompt "What is the capital of France?" --provider "anthropic"
+```
+
+The LLM API supports multiple providers:
+- OpenAI (default, model: gpt-4o)
+- Azure OpenAI (model: configured via AZURE_OPENAI_MODEL_DEPLOYMENT in .env file, defaults to gpt-4o-ms)
+- DeepSeek (model: deepseek-chat)
+- Anthropic (model: claude-3-sonnet-20240229)
+- Gemini (model: gemini-pro)
+- Local LLM (model: Qwen/Qwen2.5-32B-Instruct-AWQ)
+
+But usually it's a better idea to check the content of the file and use the APIs in the `tools/llm_api.py` file to invoke the LLM if needed.
+
+## Web browser
+
+You could use the `tools/web_scraper.py` file to scrape the web.
+```bash
+venv/bin/python3 ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3
+```
+This will output the content of the web pages.
+
+## Search engine
+
+You could use the `tools/search_engine.py` file to search the web.
+```bash
+venv/bin/python3 ./tools/search_engine.py "your search keywords"
+```
+This will output the search results in the following format:
+```
+URL: https://example.com
+Title: This is the title of the search result
+Snippet: This is a snippet of the search result
+```
+If needed, you can further use the `web_scraper.py` file to scrape the web page content.
+
+# Lessons
+
+## User Specified Lessons
+
+- You have a python venv in ./venv. Always use (activate) it when doing python development. First, to check whether 'uv' is available, use `which uv`. If that's the case, first activate the venv, and then use `uv pip install` to install packages. Otherwise, fall back to `pip`.
+- Due to Cursor's limit, when you use `git` and `gh` and need to submit a multiline commit message, first write the message in a file, and then use `git commit -F <filename>` or similar command to commit. And then remove the file. Include "[Cursor] " in the commit message and PR title.
+
+## Cursor learned
+
+- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
+- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
+- Use 'gpt-4o' as the model name for OpenAI's GPT-4 with vision capabilities
+- When searching for recent news, use the current year (2025) instead of previous years, or simply use the "recent" keyword to get the latest information
+- When installing npm packages, be aware of the current working directory - ensure you're in the correct project directory
+- In PowerShell, the '&&' operator is not supported for chaining commands (unlike bash); run commands separately or use ';' instead
+- When using Tailwind CSS with Next.js, the @tailwindcss/forms plugin is required for proper form styling
+- Always ensure globals.css is properly set up with Tailwind directives in Next.js projects
+- When making path aliases work in TypeScript with Next.js, ensure both tsconfig.json and jsconfig.json have proper "baseUrl" and "paths" configuration
+- In Next.js routes, for URL search parameters, create a new URLSearchParams with a forEach loop instead of passing ReadonlyURLSearchParams directly
+- When installing BrowserTools MCP in Cursor, run servers in this specific order: first start the browser-tools-server on port 3025, then configure the MCP server in Cursor settings, restart Cursor, and ensure Chrome DevTools are open with the BrowserTools panel visible
+- For Windows users setting up MCP servers in Cursor, note that cmd.exe is sometimes required instead of PowerShell - use this format in mcp.json: `{"command": "cmd.exe", "args": ["/c", "npx", "@agentdeskai/browser-tools-mcp@1.2.0"], "enabled": true}`
+- When setting up NextAuth in a Next.js app, make sure to create lib/auth.ts and lib/prisma.ts files, and update both tsconfig.json and jsconfig.json with path aliases (@/*)
+
+# Scratchpad
+
+## Job Tracker AI with Browser Integration
+
+Project Overview:
+- Enhanced job tracking application with AI-powered search and browser integration
+- Users can see in real-time what the AI is searching for and analyzing
+- Uses free tier AI APIs and web scraping tools to gather job data
+- Provides intelligent job recommendations and application assistance
+
+Tech Stack:
+- Backend: Python with Streamlit
+- Web Scraping: Selenium (with visible browser mode), BeautifulSoup
+- AI Processing: Gemini API, OpenAI (free tier), Cohere AI
+- Data Storage: SQLite for local data
+- Job API Sources: Indeed, LinkedIn, Glassdoor
+
+Core Features:
+[X] Project setup and environment configuration
+[X] Database schema design and models implementation
+[X] Selenium browser controller implementation
+[X] Web scraper with job site integration
+[X] AI processor for job analysis
+[X] Streamlit UI with live browser view
+[X] User profile and preferences management
+[X] Job search functionality
+[X] Job details view with AI analysis
+[X] Dashboard with statistics and insights
+[X] Application tracking system
+[X] Resume tailoring suggestions
+
+Architecture Implementation:
+1. **Frontend Layer**:
+   [X] Streamlit web application
+   [X] Real-time browser view panel
+   [X] User profile management
+   [X] Job search interface
+
+2. **Backend Services**:
+   [X] Selenium browser controller
+   [X] Web scraping engine
+   [X] AI processing integration
+   [X] Database models and connections
+
+3. **AI Processing Layer**:
+   [X] Job description analysis
+   [X] Skills extraction and matching
+   [X] Resume optimization suggestions
+
+4. **Data Storage Layer**:
+   [X] SQLite database setup
+   [X] Models for users, jobs, skills
+
+Current Status:
+- Application has been successfully implemented
+- All core features are functional
+- Streamlit server is running at http://localhost:8501
+- Users can login (demo mode), search for jobs, view results, and analyze job descriptions
+- Live browser view shows real-time job search process
+- AI analysis provides match scores and tailoring suggestions
+
+Next Steps:
+- Add authentication with secure password handling
+- Implement export functionality for job data
+- Add email notifications for application follow-ups
+- Improve AI analysis with more specific tailoring recommendations
+- Add job market trend analysis with historical data
+
+Project is complete and ready for demonstration! ✅
+
+## Job Application Tracker Project Plan
+
+Project Overview:
+- A web application to help users track their job applications
+- Features: CRUD operations for job applications, status tracking, reminders
+- Modern UI with responsive design
+
+Tech Stack:
+- Frontend: Next.js with TypeScript
+- UI: Tailwind CSS
+- Database: SQLite (for simplicity and easy setup)
+- Authentication: NextAuth.js
+
+Core Features:
+[X] Project setup and dependencies
+[X] Database schema design
+[X] Basic CRUD operations for job applications (UI)
+[X] User authentication
+[X] Dashboard with application statistics
+[X] Application status tracking (UI)
+[X] Follow-up reminders
+[X] Search and filter functionality (UI)
+[X] Export functionality
+
+Database Schema (Implemented):
+- Users
+  - id, email, name, password, created_at
+- Applications
+  - id, user_id, company, position, status, applied_date, response_date, notes
+- Reminders
+  - id, application_id, reminder_date, description, completed
+
+Implementation Steps:
+1. [X] Initial project setup with Next.js
+2. [X] Set up database and models
+3. [X] Create basic UI components (landing page, login/register forms)
+4. [X] Implement authentication
+5. [X] Build core application features (UI)
+6. [X] Add backend functionality
+7. [X] Testing and refinement
+
+Current Progress:
+- Created project structure with Next.js and TypeScript
+- Set up Tailwind CSS for styling
+- Designed and implemented landing page with modern UI
+- Created login and registration pages with working authentication
+- Designed dashboard layout with sidebar navigation
+- Created application list view with filtering capabilities
+- Implemented new application form
+- Set up SQLite with Prisma
+- Created database schema for Users, Applications, and Reminders
+- Added authentication using NextAuth.js
+- Implemented API routes for CRUD operations
+- Protected dashboard routes with authentication
+- Created UI components for Applications:
+  - Applications list page with search and filters
+  - Application details page
+  - New application form
+  - Edit application form
+- Connected applications UI components to API
+- Implemented API routes for application CRUD operations
+- Created dashboard with statistics showing application counts by status and recent applications
+- Implemented reminders functionality:
+  - Created API routes for reminders
+  - Added reminders to application details page
+  - Created separate reminders page
+- Implemented export functionality:
+  - Added API endpoint for exporting applications as CSV
+  - Added export button to applications list page
+- Fixed authentication setup issues:
+  - Created lib/auth.ts and lib/prisma.ts files
+  - Updated path aliases configuration in tsconfig.json
+  - Simplified NextAuth route implementation
+
+Next Steps:
+1. [X] Implement NextAuth.js for authentication
+2. [X] Connect authentication to Prisma database
+3. [X] Create API routes for applications
+4. [X] Protect dashboard routes with authentication
+5. [X] Create applications UI components
+6. [X] Connect applications UI components to API
+7. [X] Add dashboard statistics
+8. [X] Implement reminders functionality
+9. [X] Implement export functionality
+10. [X] Add final polish and refinements
+
+Current API Endpoints:
+- Authentication:
+  - POST /api/auth/register - Register a new user
+  - POST /api/auth/login - Login (handled by NextAuth)
+- Applications:
+  - GET /api/applications - Get all applications
+  - POST /api/applications - Create a new application
+  - GET /api/applications/[id] - Get a specific application
+  - PUT /api/applications/[id] - Update a specific application
+  - DELETE /api/applications/[id] - Delete a specific application
+  - GET /api/applications/export - Export all applications as CSV
+- Reminders:
+  - GET /api/reminders - Get all reminders or reminders for specific application
+  - POST /api/reminders - Create a new reminder
+  - GET /api/reminders/[id] - Get a specific reminder
+  - PUT /api/reminders/[id] - Update a specific reminder
+  - DELETE /api/reminders/[id] - Delete a specific reminder
+
+Project Status: Complete with all features implemented and functioning correctly ✅
+
+## BrowserTools MCP Installation
+
+Task: Install and configure BrowserTools MCP for Cursor
+
+Steps:
+[X] Clone the BrowserTools MCP repository
+[X] Install the Chrome extension
+[X] Configure the MCP server in Cursor settings
+[ ] Get the MCP server to connect properly (currently showing red)
+
+Issues:
+- PowerShell command chaining doesn't work with &&
+- mcp.json file needed specific formatting
+- Need to run both browser-tools-server and browser-tools-mcp servers
+- Getting server connection issues between components
+
+## Firecrawl MCP Integration
+
+Task: Create a Firecrawl MCP integration for Cursor
+
+Steps:
+[X] Create project structure for Firecrawl MCP
+[X] Set up Express server with MCP schema
+[X] Implement Firecrawl API endpoints
+[X] Configure Cursor to use the MCP server
+
+Note: This task was deprioritized to focus on the main job tracker project.

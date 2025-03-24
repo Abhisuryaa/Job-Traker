@@ -87,11 +87,9 @@ export async function POST(request: NextRequest) {
       salary,
       notes,
       applicationUrl,
-      contactName,
-      contactEmail,
     } = body;
 
-    if (!company || !position || !location || !status || !appliedDate) {
+    if (!company || !position || !status || !appliedDate) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -103,14 +101,12 @@ export async function POST(request: NextRequest) {
       data: {
         company,
         position,
-        location,
+        location: location || "",
         status,
         appliedDate: new Date(appliedDate),
-        salary,
-        notes,
-        url: applicationUrl,
-        contactName,
-        contactEmail,
+        salary: salary || null,
+        notes: notes || null,
+        url: applicationUrl || null,
         userId: session.user.id,
       },
     });

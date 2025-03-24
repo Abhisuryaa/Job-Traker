@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import prisma from "@/lib/prisma";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { prisma } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
 
 // GET /api/reminders/[id]
 export async function GET(
@@ -10,27 +10,26 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
+    
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "You must be signed in to view this reminder" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const userId = (session.user as any).id;
-    const reminderId = params.id;
-
-    // Get reminder, including application details
-    const reminder = await prisma.reminder.findUnique({
-      where: { id: reminderId },
+    const reminder = await prisma.reminder.findFirst({
+      where: {
+        id: params.id,
+        application: {
+          userId: session.user.id as string,
+        },
+      },
       include: {
         application: {
           select: {
-            id: true,
             company: true,
             position: true,
-            userId: true,
           },
         },
       },
@@ -43,19 +42,17 @@ export async function GET(
       );
     }
 
-    // Verify that the reminder's application belongs to the user
-    if (reminder.application.userId !== userId) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this reminder" },
-        { status: 403 }
-      );
-    }
+    // Transform the response to match the frontend field names
+    const transformedReminder = {
+      ...reminder,
+      reminderDate: reminder.dueDate, // Add the reminderDate field for frontend compatibility
+    };
 
-    return NextResponse.json(reminder);
+    return NextResponse.json(transformedReminder);
   } catch (error) {
     console.error("Error fetching reminder:", error);
     return NextResponse.json(
-      { error: "Error fetching reminder" },
+      { error: "Failed to fetch reminder" },
       { status: 500 }
     );
   }
@@ -68,35 +65,30 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
+    
     if (!session || !session.user) {
       return NextResponse.json(
-        { error: "You must be signed in to update this reminder" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const userId = (session.user as any).id;
-    const reminderId = params.id;
     const data = await request.json();
+    // Support both field names (reminderDate from frontend, dueDate for database)
+    const description = data.description;
+    const dueDate = data.reminderDate || data.dueDate; // Handle both field names
+    const completed = data.completed !== undefined ? data.completed : false;
 
-    // Validate required fields
-    if (!data.reminderDate || !data.description) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // Get the reminder with its application
-    const existingReminder = await prisma.reminder.findUnique({
-      where: { id: reminderId },
-      include: {
+    // Validate that the reminder exists and belongs to the user
+    const existingReminder = await prisma.reminder.findFirst({
+      where: {
+        id: params.id,
         application: {
-          select: {
-            userId: true,
-          },
+          userId: session.user.id as string,
         },
+      },
+      include: {
+        application: true,
       },
     });
 
@@ -107,29 +99,27 @@ export async function PUT(
       );
     }
 
-    // Verify that the reminder's application belongs to the user
-    if (existingReminder.application.userId !== userId) {
-      return NextResponse.json(
-        { error: "You do not have permission to update this reminder" },
-        { status: 403 }
-      );
-    }
-
     // Update the reminder
     const updatedReminder = await prisma.reminder.update({
-      where: { id: reminderId },
+      where: { id: params.id },
       data: {
-        reminderDate: new Date(data.reminderDate),
-        description: data.description,
-        completed: data.completed !== undefined ? data.completed : existingReminder.completed,
+        description,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        completed,
       },
     });
 
-    return NextResponse.json(updatedReminder);
+    // Transform the response to match the frontend field names
+    const transformedReminder = {
+      ...updatedReminder,
+      reminderDate: updatedReminder.dueDate, // Add the reminderDate field for frontend compatibility
+    };
+
+    return NextResponse.json(transformedReminder);
   } catch (error) {
     console.error("Error updating reminder:", error);
     return NextResponse.json(
-      { error: "Error updating reminder" },
+      { error: "Failed to update reminder" },
       { status: 500 }
     );
   }

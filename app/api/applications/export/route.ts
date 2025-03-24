@@ -1,79 +1,65 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/db";
 
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    
+    if (!session || !session.user) {
       return NextResponse.json(
-        { error: "You must be signed in to export applications" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
-
-    // Get applications for the user
+    
+    // Get all applications with their reminders
     const applications = await prisma.application.findMany({
       where: {
-        userId: (session.user as any).id,
+        userId: session.user.id as string,
+      },
+      include: {
+        reminders: true,
       },
       orderBy: {
         appliedDate: "desc",
       },
-      include: {
-        reminders: {
-          select: {
-            id: true,
-            reminderDate: true,
-            description: true,
-            completed: true,
-          },
-        },
-      },
     });
-
-    // Transform data for CSV export
-    const csvData = applications.map((app) => {
-      const remindersText = app.reminders
-        .map((r) => `${r.description} (${r.reminderDate.toISOString().split("T")[0]})${r.completed ? " - Completed" : ""}`)
-        .join("; ");
-
-      return {
-        Company: app.company,
-        Position: app.position,
-        Status: app.status,
-        "Applied Date": app.appliedDate ? app.appliedDate.toISOString().split("T")[0] : "",
-        "Response Date": app.responseDate ? app.responseDate.toISOString().split("T")[0] : "",
-        Notes: app.notes || "",
-        Reminders: remindersText,
-      };
+    
+    // Transform the reminders to add reminderDate field for frontend compatibility
+    const transformedApplications = applications.map(app => ({
+      ...app,
+      reminders: app.reminders.map(reminder => ({
+        ...reminder,
+        reminderDate: reminder.dueDate, // Add reminderDate field
+      })),
+    }));
+    
+    // Convert to CSV format
+    let csv = "Company,Position,Status,Applied Date,Response Date,Location,Salary,Notes,URL\n";
+    
+    transformedApplications.forEach((app) => {
+      const row = [
+        app.company.replace(/,/g, " "),
+        app.position.replace(/,/g, " "),
+        app.status,
+        new Date(app.appliedDate).toLocaleDateString(),
+        app.responseDate ? new Date(app.responseDate).toLocaleDateString() : "",
+        app.location || "",
+        app.salary || "",
+        app.notes ? app.notes.replace(/,/g, " ").replace(/\n/g, " ") : "",
+        app.url || "",
+      ];
+      
+      csv += row.join(",") + "\n";
     });
-
-    // Convert to CSV string
-    const headers = Object.keys(csvData[0] || {});
-    const csvString = [
-      headers.join(","),
-      ...csvData.map((row) =>
-        headers
-          .map((header) => {
-            const value = row[header as keyof typeof row];
-            // Escape quotes and wrap in quotes if contains comma
-            const escaped = typeof value === "string" ? value.replace(/"/g, '""') : value;
-            return typeof escaped === "string" && (escaped.includes(",") || escaped.includes('"') || escaped.includes("\n"))
-              ? `"${escaped}"`
-              : escaped;
-          })
-          .join(",")
-      ),
-    ].join("\n");
-
-    // Return CSV as a downloadable file
-    return new NextResponse(csvString, {
+    
+    // Return the CSV data
+    return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv",
-        "Content-Disposition": `attachment; filename="job-applications-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Content-Disposition": "attachment; filename=job-applications.csv",
       },
     });
   } catch (error) {
